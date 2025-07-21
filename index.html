@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <title>バイト収支カレンダー</title>
+  <title>バイト収支カレンダー＆扶養チェッカー</title>
   <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
   <style>
@@ -33,11 +33,19 @@
     button:hover {
       background: #388e3c;
     }
+    .over {
+      color: red;
+      font-weight: bold;
+    }
+    .under {
+      color: green;
+      font-weight: bold;
+    }
   </style>
 </head>
 <body>
 
-<h1>🗓️ バイト収支カレンダー</h1>
+<h1>🗓️ バイト収支カレンダー＆扶養チェッカー</h1>
 
 <form id="workForm">
   <label>開始日<input type="date" id="startDate" required></label>
@@ -54,6 +62,7 @@
   <h2>📊 累計情報</h2>
   <p id="totalIncome">総収入: ¥0</p>
   <p id="totalHours">総勤務時間: 0 時間</p>
+  <p id="fuyouStatus">扶養内: <span class="under">○</span></p>
 </div>
 
 <div id="calendar"></div>
@@ -61,6 +70,7 @@
 <script>
   let calendar;
   let events = JSON.parse(localStorage.getItem("workEvents")) || [];
+  const fuyoLimit = 103000;
 
   document.addEventListener('DOMContentLoaded', function () {
     const calendarEl = document.getElementById('calendar');
@@ -112,6 +122,13 @@
     const totalHours = events.reduce((sum, e) => sum + (e.extendedProps?.hours || 0), 0);
     document.getElementById("totalIncome").textContent = `総収入: ¥${totalIncome}`;
     document.getElementById("totalHours").textContent = `総勤務時間: ${totalHours.toFixed(2)} 時間`;
+
+    const status = document.getElementById("fuyouStatus");
+    if (totalIncome <= fuyoLimit) {
+      status.innerHTML = '扶養内: <span class="under">○</span>';
+    } else {
+      status.innerHTML = '扶養内: <span class="over">×</span>';
+    }
   }
 </script>
 
