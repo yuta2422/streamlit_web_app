@@ -1,23 +1,25 @@
-<!-- index.html -->
 <!DOCTYPE html>
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
   <title>バイト収支＆扶養チェッカー</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body {
-      font-family: sans-serif;
+      font-family: "Segoe UI", sans-serif;
+      background-color: #f9f9f9;
       padding: 2em;
-      background: #f9f9f9;
     }
     h1 {
       color: #333;
     }
-    form {
-      background: white;
-      padding: 1.5em;
+    form, .summary, .chart-box {
+      background: #fff;
+      padding: 20px;
+      margin-bottom: 2em;
       border-radius: 8px;
-      max-width: 600px;
+      box-shadow: 0 0 5px #ccc;
+      max-width: 700px;
     }
     label {
       display: block;
@@ -31,25 +33,121 @@
     }
     button {
       margin-top: 1.5em;
-      padding: 10px;
+      padding: 10px 20px;
       background: #4caf50;
       color: white;
       border: none;
       border-radius: 5px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #388e3c;
+    }
+    canvas {
+      width: 100%;
     }
   </style>
 </head>
 <body>
-  <h1>🗓️ バイト収支＆扶養チェッカー</h1>
-  <form>
-    <label>開始日<input type="date"></label>
-    <label>開始時刻<input type="time" step="300"></label>
-    <label>終了日<input type="date"></label>
-    <label>終了時刻<input type="time" step="300"></label>
-    <label>休憩時間（分）<input type="number" value="60"></label>
-    <label>時給（円）<input type="number" value="1000"></label>
-    <label>交通費（円）<input type="number" value="0"></label>
-    <button type="submit">記録する</button>
-  </form>
+
+<h1>🗓️ バイト収支＆扶養チェッカー</h1>
+
+<form id="workForm">
+  <label>開始日 <input type="date" id="startDate"></label>
+  <label>開始時刻 <input type="time" id="startTime" step="300"></label>
+  <label>終了日 <input type="date" id="endDate"></label>
+  <label>終了時刻 <input type="time" id="endTime" step="300"></label>
+  <label>休憩時間（分）<input type="number" id="breakTime" value="0" step="5"></label>
+  <label>時給（円）<input type="number" id="wage" value="1000"></label>
+  <label>交通費（円）<input type="number" id="transport" value="0"></label>
+  <button type="submit">記録する</button>
+</form>
+
+<div class="summary">
+  <h2>📊 累計情報</h2>
+  <p id="totalHours">総勤務時間: 0 時間</p>
+  <p id="totalIncome">総収入: ¥0</p>
+</div>
+
+<div class="chart-box">
+  <h2>📈 勤務履歴グラフ</h2>
+  <canvas id="workChart"></canvas>
+</div>
+
+<script>
+  const form = document.getElementById("workForm");
+  const totalHoursElem = document.getElementById("totalHours");
+  const totalIncomeElem = document.getElementById("totalIncome");
+
+  let records = [];
+  let chart;
+
+  form.addEventListener("submit", function (e) {
+    e.preventDefault();
+
+    const sDate = new Date(`${startDate.value}T${startTime.value}`);
+    const eDate = new Date(`${endDate.value}T${endTime.value}`);
+    const breakMin = parseFloat(breakTime.value);
+    const wage = parseFloat(document.getElementById("wage").value);
+    const transport = parseFloat(document.getElementById("transport").value);
+
+    const workTime = (eDate - sDate) / (1000 * 60 * 60) - breakMin / 60;
+    const income = Math.round(workTime * wage + transport);
+
+    const dateLabel = startDate.value;
+    records.push({
+      label: dateLabel,
+      hours: workTime,
+      income: income
+    });
+
+    updateSummary();
+    updateChart();
+    form.reset();
+  });
+
+  function updateSummary() {
+    const totalHours = records.reduce((acc, rec) => acc + rec.hours, 0);
+    const totalIncome = records.reduce((acc, rec) => acc + rec.income, 0);
+    totalHoursElem.textContent = `総勤務時間: ${totalHours.toFixed(2)} 時間`;
+    totalIncomeElem.textContent = `総収入: ¥${totalIncome}`;
+  }
+
+  function updateChart() {
+    const ctx = document.getElementById("workChart").getContext("2d");
+    const labels = records.map(r => r.label);
+    const hoursData = records.map(r => r.hours);
+    const incomeData = records.map(r => r.income);
+
+    if (chart) chart.destroy();
+    chart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: '勤務時間 (時間)',
+            data: hoursData,
+            backgroundColor: 'rgba(33, 150, 243, 0.5)'
+          },
+          {
+            label: '収入 (円)',
+            data: incomeData,
+            backgroundColor: 'rgba(76, 175, 80, 0.5)'
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          y: {
+            beginAtZero: true
+          }
+        }
+      }
+    });
+  }
+</script>
+
 </body>
 </html>
