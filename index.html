@@ -10,16 +10,16 @@
       background-color: #f9f9f9;
       padding: 2em;
     }
-    h1 {
-      color: #333;
-    }
-    form, .summary, .chart-box {
+    form, .summary, .chart-box, .controls {
       background: #fff;
       padding: 20px;
       margin-bottom: 2em;
       border-radius: 8px;
       box-shadow: 0 0 5px #ccc;
       max-width: 700px;
+    }
+    h1, h2 {
+      color: #333;
     }
     label {
       display: block;
@@ -67,6 +67,7 @@
   <h2>📊 累計情報</h2>
   <p id="totalHours">総勤務時間: 0 時間</p>
   <p id="totalIncome">総収入: ¥0</p>
+  <p id="fuyouCheck">扶養内: ○</p>
 </div>
 
 <div class="chart-box">
@@ -74,33 +75,33 @@
   <canvas id="workChart"></canvas>
 </div>
 
+<div class="controls">
+  <button onclick="clearLast()">最後の記録を削除</button>
+  <button onclick="clearAll()">すべて削除</button>
+</div>
+
 <script>
   const form = document.getElementById("workForm");
   const totalHoursElem = document.getElementById("totalHours");
   const totalIncomeElem = document.getElementById("totalIncome");
+  const fuyouElem = document.getElementById("fuyouCheck");
+  const fuyouLimit = 103000;
 
-  let records = [];
+  let records = JSON.parse(localStorage.getItem("workRecords")) || [];
   let chart;
 
   form.addEventListener("submit", function (e) {
     e.preventDefault();
-
     const sDate = new Date(`${startDate.value}T${startTime.value}`);
     const eDate = new Date(`${endDate.value}T${endTime.value}`);
     const breakMin = parseFloat(breakTime.value);
     const wage = parseFloat(document.getElementById("wage").value);
     const transport = parseFloat(document.getElementById("transport").value);
-
     const workTime = (eDate - sDate) / (1000 * 60 * 60) - breakMin / 60;
     const income = Math.round(workTime * wage + transport);
-
     const dateLabel = startDate.value;
-    records.push({
-      label: dateLabel,
-      hours: workTime,
-      income: income
-    });
-
+    records.push({ label: dateLabel, hours: workTime, income: income });
+    localStorage.setItem("workRecords", JSON.stringify(records));
     updateSummary();
     updateChart();
     form.reset();
@@ -111,6 +112,7 @@
     const totalIncome = records.reduce((acc, rec) => acc + rec.income, 0);
     totalHoursElem.textContent = `総勤務時間: ${totalHours.toFixed(2)} 時間`;
     totalIncomeElem.textContent = `総収入: ¥${totalIncome}`;
+    fuyouElem.textContent = `扶養内: ${totalIncome <= fuyouLimit ? "○" : "×"}`;
   }
 
   function updateChart() {
@@ -118,7 +120,6 @@
     const labels = records.map(r => r.label);
     const hoursData = records.map(r => r.hours);
     const incomeData = records.map(r => r.income);
-
     if (chart) chart.destroy();
     chart = new Chart(ctx, {
       type: 'bar',
@@ -139,14 +140,29 @@
       },
       options: {
         responsive: true,
-        scales: {
-          y: {
-            beginAtZero: true
-          }
-        }
+        scales: { y: { beginAtZero: true } }
       }
     });
   }
+
+  function clearLast() {
+    records.pop();
+    localStorage.setItem("workRecords", JSON.stringify(records));
+    updateSummary();
+    updateChart();
+  }
+
+  function clearAll() {
+    if (confirm("すべての記録を削除しますか？")) {
+      records = [];
+      localStorage.removeItem("workRecords");
+      updateSummary();
+      updateChart();
+    }
+  }
+
+  updateSummary();
+  updateChart();
 </script>
 
 </body>
