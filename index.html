@@ -40,9 +40,13 @@
 <h1>🗓️ バイト収支カレンダー</h1>
 
 <form id="workForm">
-  <label>勤務日<input type="date" id="workDate" required></label>
-  <label>勤務時間（h）<input type="number" id="hours" step="0.1" required></label>
-  <label>収入（円）<input type="number" id="income" step="1" required></label>
+  <label>開始日<input type="date" id="startDate" required></label>
+  <label>開始時刻<input type="time" id="startTime" required step="300"></label>
+  <label>終了日<input type="date" id="endDate" required></label>
+  <label>終了時刻<input type="time" id="endTime" required step="300"></label>
+  <label>休憩時間（分）<input type="number" id="breakTime" value="0" step="5"></label>
+  <label>時給（円）<input type="number" id="wage" value="1000"></label>
+  <label>交通費（円）<input type="number" id="transport" value="0"></label>
   <button type="submit">記録する</button>
 </form>
 
@@ -80,11 +84,22 @@
 
   document.getElementById("workForm").addEventListener("submit", function (e) {
     e.preventDefault();
-    const date = document.getElementById("workDate").value;
-    const hours = parseFloat(document.getElementById("hours").value);
-    const income = parseFloat(document.getElementById("income").value);
+    const sDate = new Date(`${startDate.value}T${startTime.value}`);
+    const eDate = new Date(`${endDate.value}T${endTime.value}`);
+    const breakMin = parseFloat(document.getElementById("breakTime").value);
+    const wage = parseFloat(document.getElementById("wage").value);
+    const transport = parseFloat(document.getElementById("transport").value);
+
+    const workTime = (eDate - sDate) / (1000 * 60 * 60) - breakMin / 60;
+    const income = Math.round(workTime * wage + transport);
+    const dateLabel = startDate.value;
+
     const title = `¥${income}`;
-    const newEvent = { title, start: date, extendedProps: { hours, income } };
+    const newEvent = {
+      title,
+      start: dateLabel,
+      extendedProps: { hours: workTime, income: income }
+    };
     events.push(newEvent);
     localStorage.setItem("workEvents", JSON.stringify(events));
     calendar.addEvent(newEvent);
@@ -96,7 +111,7 @@
     const totalIncome = events.reduce((sum, e) => sum + (e.extendedProps?.income || 0), 0);
     const totalHours = events.reduce((sum, e) => sum + (e.extendedProps?.hours || 0), 0);
     document.getElementById("totalIncome").textContent = `総収入: ¥${totalIncome}`;
-    document.getElementById("totalHours").textContent = `総勤務時間: ${totalHours} 時間`;
+    document.getElementById("totalHours").textContent = `総勤務時間: ${totalHours.toFixed(2)} 時間`;
   }
 </script>
 
